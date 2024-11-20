@@ -84,15 +84,19 @@
       :else (update-height node))))
 
 (defn insert [root node]
-  (if (>= (:value node) (:value root))
-    (if (nil? (:right root))
-      (assoc root :right node :height 2)
-      (let [new-node (balance (insert (:right root) node))]
-        (balance (assoc root :right new-node))))
-    (if (nil? (:left root))
-      (assoc root :left node :height 2)
-      (let [new-node (balance (insert (:left root) node))]
-        (balance (assoc root :left new-node))))))
+  (if (= (type (:key root)) (type (:key node)))
+    (if (<= (compare (:key node) (:key root)) 0)
+      (if (nil? (:right root))
+        (assoc root :right node :height 2)
+        (let [new-node (balance (insert (:right root) node))]
+          (balance (assoc root :right new-node))))
+      (if (nil? (:left root))
+        (assoc root :left node :height 2)
+        (let [new-node (balance (insert (:left root) node))]
+          (balance (assoc root :left new-node)))))
+    (do
+      (println "Key Error: Invalid key type")
+      root)))
 
 ;slight-right-rotation
 ;(def o (AVLTreeVertex. "o" 1 1 nil nil))
@@ -148,6 +152,3 @@
 ;(def d (AVLTreeVertex. "d" 1 1 nil nil))
 ;(def b (AVLTreeVertex. "b" 1 2 d e))
 ;(def a (AVLTreeVertex. "a" 1 5 b c))
-
-
-;height is 1
