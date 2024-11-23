@@ -83,20 +83,52 @@
 
       :else (update-height node))))
 
+(defn type-checking [n1 n2]
+  (= (type (:key n1)) (type (:key n2))))
+
 (defn insert [root node]
-  (if (= (type (:key root)) (type (:key node)))
-    (if (<= (compare (:key node) (:key root)) 0)
-      (if (nil? (:right root))
-        (assoc root :right node :height 2)
-        (let [new-node (balance (insert (:right root) node))]
-          (balance (assoc root :right new-node))))
-      (if (nil? (:left root))
-        (assoc root :left node :height 2)
-        (let [new-node (balance (insert (:left root) node))]
-          (balance (assoc root :left new-node)))))
+  (if (type-checking root node)
+    (let [cmp (compare (:key root) (:key node))]
+      (if (or (zero? cmp) (neg? cmp))
+        (if (nil? (:right root))
+          (assoc root :right node :height 2)
+          (let [new-node (balance (insert (:right root) node))]
+            (balance (assoc root :right new-node))))
+        (if (nil? (:left root))
+          (assoc root :left node :height 2)
+          (let [new-node (balance (insert (:left root) node))]
+            (balance (assoc root :left new-node))))))
     (do
       (println "Key Error: Invalid key type")
       root)))
+
+(defn search-node [node key]
+  (let [cmp (compare (:key node) key)]
+    (cond
+      (nil? node) nil
+      (zero? cmp) node
+      (neg? cmp) (search-node (:right node) key)
+      (pos? cmp) (search-node (:left node) key))))
+
+(defn search-min-node [node]
+  (if (:left node)
+    (recur (:left node))
+    node))
+
+(defn delete [node key]
+  (if node
+    (let [cmp (compare (:key node) key)]
+      (cond
+        (nil? node) nil
+        (neg? cmp) (balance (assoc node :right (delete (:right node) key)))
+        (pos? cmp) (balance (assoc node :left (delete (:left node) key)))
+        (zero? cmp)
+        (if (nil? (:right node))
+          (:left node)
+          (let [nr (:right node)
+                min-node (search-min-node nr)
+                new-root (assoc node :key (:key min-node) :value (:value min-node))]
+            (balance (assoc new-root :right (delete nr (:key min-node))))))))))
 
 ;slight-right-rotation
 ;(def o (AVLTreeVertex. "o" 1 1 nil nil))
