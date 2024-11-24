@@ -3,7 +3,7 @@
 (defrecord AVLTreeVertex [key value height left right])
 
 (defn create-node [key value]
-  (AVLTreeVertex. key value 0 nil nil))
+  (AVLTreeVertex. key value 1 nil nil))
 
 (defn count-new-height [height, rotation-type]
   (cond
@@ -130,6 +130,42 @@
                 new-root (assoc node :key (:key min-node) :value (:value min-node))]
             (balance (assoc new-root :right (delete nr (:key min-node))))))))))
 
+(defn map-avl [f node]
+  (when node
+    (let [l (map-avl f (:left node))
+          r (map-avl f (:right node))
+          new-value (f [(:key node) (:value node)])]
+      (into () (concat l [new-value] r)))))
+
+(defn filter-avl [f node]
+  (when node
+    (let [l (filter-avl f (:left node))
+          r (filter-avl f (:right node))
+          entry [(:key node) (:value node)]
+          new-value (if (f entry) [entry])]
+      (into () (concat l new-value r)))))
+
+(defn- opposite [side] (if (= side :left) :right :left))
+(defn reduce-avl [f acc node side]
+  (if (nil? node)
+    acc
+    (let [acc (reduce-avl f acc (side node) side)
+          acc (f acc [(:key node) (:value node)])
+          acc (reduce-avl f acc ((opposite side) node) side)]
+      acc)))
+
+(defn visualize [node]
+  (letfn [(build-tree [node prefix is-left]
+            (when node
+              (str
+                (build-tree (:right node) (str prefix (if is-left "│   " "    ")) false)
+                prefix
+                (if is-left "└── " "┌── ")
+                (str (:key node) ":" (:value node) " (h:" (:height node) ")")
+                "\n"
+                (build-tree (:left node) (str prefix (if is-left "    " "│   ")) true))))]
+    (println (build-tree node "" false))))
+
 ;slight-right-rotation
 ;(def o (AVLTreeVertex. "o" 1 1 nil nil))
 ;(def n (AVLTreeVertex. "n" 1 2 o nil))
@@ -184,3 +220,31 @@
 ;(def d (AVLTreeVertex. "d" 1 1 nil nil))
 ;(def b (AVLTreeVertex. "b" 1 2 d e))
 ;(def a (AVLTreeVertex. "a" 1 5 b c))
+
+;delete
+;1
+;(def h (AVLTreeVertex. 1 1 1 nil nil))
+;(def g (AVLTreeVertex. 3 3 1 nil nil))
+;(def f (AVLTreeVertex. 9 9 1 nil nil))
+;(def e (AVLTreeVertex. 8 8 2 nil f))
+;(def d (AVLTreeVertex. 11 11 1 nil nil))
+;(def c (AVLTreeVertex. 2 2 2 h g))
+;(def b (AVLTreeVertex. 10 10 3 e d))
+;(def a (AVLTreeVertex. 7 7 4 c b))
+;2
+;(def c (AVLTreeVertex. "c" 2 1 nil nil))
+;(def a (AVLTreeVertex. "a" 3 1 nil nil))
+;(def b (AVLTreeVertex. "b" 1 1 a c))
+
+;map
+;(map #(- % 2) (map-avl second b))
+
+;filter
+;(filter-avl #(= (second %) 2) b)
+
+;reduce
+;(def c (AVLTreeVertex. "c" "c" 1 nil nil))
+;(def a (AVLTreeVertex. "a" "a" 1 nil nil))
+;(def b (AVLTreeVertex. "b" "b" 2 a c))
+;(reduce-avl #(str %1 (second %2)) 0 a :left)
+;(reduce-avl #(str %1 (second %2)) 0 a :right)
