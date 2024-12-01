@@ -1,18 +1,19 @@
-(ns avl-tree)
+(ns avl-tree
+  (:refer-clojure :exclude [merge]))
 
 (defrecord AVLTreeVertex [key value height left right])
 
 (defn create-node [key value]
   (AVLTreeVertex. key value 1 nil nil))
 
-(defn count-new-height [height, rotation-type]
+(defn- count-new-height [height, rotation-type]
   (cond
     (= rotation-type "slight")
     (max (- height 2) 1)
     (= rotation-type "big")
     (max (dec height) 1)))
 
-(defn slight-right-rotation [node, rotation-type]
+(defn- slight-right-rotation [node, rotation-type]
   (cond
     (= rotation-type "slight")
     (let [new-root (:left node)
@@ -28,7 +29,7 @@
                                      (count-new-height (:height node) "big"))]
       (assoc new-root :right new-root-right))))
 
-(defn slight-left-rotation [node, rotation-type]
+(defn- slight-left-rotation [node, rotation-type]
   (cond
     (= rotation-type "slight")
     (let [new-root (:right node)
@@ -44,31 +45,31 @@
                                     (count-new-height (:height node) "big"))]
       (assoc new-root :left new-root-left))))
 
-(defn big-right-rotation [node]
+(defn- big-right-rotation [node]
   (let [new-left (slight-left-rotation (:left node) "big")
         new-tree (assoc node :left new-left)]
     (slight-right-rotation new-tree "slight")))
 
-(defn big-left-rotation [node]
+(defn- big-left-rotation [node]
   (let [new-right (slight-right-rotation (:right node) "big")
         new-tree (assoc node :right new-right)]
     (slight-left-rotation new-tree "slight")))
 
-(defn height [node]
+(defn- height [node]
   (if node (:height node) 0))
 
-(defn update-height [node]
+(defn- update-height [node]
   (let [hl (height (:left node))
         hr (height (:right node))
         new-height (inc (max hl hr))]
     (assoc node :height new-height)))
 
-(defn balance-factor [node]
+(defn- balance-factor [node]
   (let [hl (height (:left node))
         hr (height (:right node))]
     (- hl hr)))
 
-(defn balance [node]
+(defn- balance [node]
   (let [bf (balance-factor node)]
     (cond
       (== bf -2)
@@ -83,24 +84,26 @@
 
       :else (update-height node))))
 
-(defn type-checking [n1 n2]
+(defn- type-checking [n1 n2]
   (= (type (:key n1)) (type (:key n2))))
 
 (defn insert [root node]
-  (if (type-checking root node)
-    (let [cmp (compare (:key root) (:key node))]
-      (if (or (zero? cmp) (neg? cmp))
-        (if (nil? (:right root))
-          (assoc root :right node :height 2)
-          (let [new-node (balance (insert (:right root) node))]
-            (balance (assoc root :right new-node))))
-        (if (nil? (:left root))
-          (assoc root :left node :height 2)
-          (let [new-node (balance (insert (:left root) node))]
-            (balance (assoc root :left new-node))))))
-    (do
-      (println "Key Error: Invalid key type")
-      root)))
+  (if (nil? root)
+    node
+    (if (type-checking root node)
+      (let [cmp (compare (:key root) (:key node))]
+        (if (or (zero? cmp) (neg? cmp))
+          (if (nil? (:right root))
+            (assoc root :right node :height 2)
+            (let [new-node (balance (insert (:right root) node))]
+              (balance (assoc root :right new-node))))
+          (if (nil? (:left root))
+            (assoc root :left node :height 2)
+            (let [new-node (balance (insert (:left root) node))]
+              (balance (assoc root :left new-node))))))
+      (do
+        (println "Key Error: Invalid key type")
+        root))))
 
 (defn search-node [node key]
   (let [cmp (compare (:key node) key)]
@@ -110,7 +113,7 @@
       (neg? cmp) (search-node (:right node) key)
       (pos? cmp) (search-node (:left node) key))))
 
-(defn search-min-node [node]
+(defn- search-min-node [node]
   (if (:left node)
     (recur (:left node))
     node))
@@ -149,10 +152,69 @@
 (defn reduce-avl [f acc node side]
   (if (nil? node)
     acc
-    (let [acc (reduce-avl f acc (side node) side)
-          acc (f acc [(:key node) (:value node)])
-          acc (reduce-avl f acc ((opposite side) node) side)]
-      acc)))
+    (cond
+      (= side :right)
+      (let [acc (reduce-avl f acc (side node) side)
+            acc (f [(:key node) (:value node)] acc)
+            acc (reduce-avl f acc ((opposite side) node) side)]
+        acc)
+      (= side :left)
+      (let [acc (reduce-avl f acc (side node) side)
+            acc (f acc [(:key node) (:value node)])
+            acc (reduce-avl f acc ((opposite side) node) side)]
+        acc))))
+
+(defn- merge-type [v1 v2]
+  (if (= (type v1) (type v2))
+    (cond
+      (number? v1)
+      (+ v1 v2)
+      (string? v1)
+      (str v1 v2)
+      (instance? clojure.lang.IPersistentCollection v1)
+      (into v1 v2))
+    (throw (Exception. "Key Error: Invalid key type"))))
+(defn merge-insert [root node]
+  (if (nil? root)
+    node
+    (if (type-checking root node)
+      (let [cmp (compare (:key root) (:key node))]
+        (cond
+          (zero? cmp)
+          (try
+            (let [new-value (merge-type (:value root) (:value node))
+                  new-node (create-node (:key node) new-value)
+                  new-tree (delete root (:key node))]
+              (insert new-tree new-node))
+            (catch Exception e
+              (throw e)))
+          (neg? cmp)
+          (if (nil? (:right root))
+            (assoc root :right node :height 2)
+            (let [new-node (balance (merge-insert (:right root) node))]
+              (balance (assoc root :right new-node))))
+          (pos? cmp)
+          (if (nil? (:left root))
+            (assoc root :left node :height 2)
+            (let [new-node (balance (merge-insert (:left root) node))]
+              (balance (assoc root :left new-node))))))
+      (do
+        (println "Key Error: Invalid key type")
+        root))))
+
+(defn merge [root1 root2]
+  (let [keys (map-avl first root2)
+        values (map-avl second root2)
+        length (count keys)]
+    (loop [i 0
+           new-tree root1]
+      (if (> i (- length 1))
+        new-tree
+        (recur (inc i) (try
+                         (merge-insert new-tree (create-node (nth keys i) (nth values i)))
+                         (catch Exception e
+                           (println (.getMessage e))
+                           nil)))))))
 
 (defn visualize [node]
   (letfn [(build-tree [node prefix is-left]
@@ -246,5 +308,23 @@
 ;(def c (AVLTreeVertex. "c" "c" 1 nil nil))
 ;(def a (AVLTreeVertex. "a" "a" 1 nil nil))
 ;(def b (AVLTreeVertex. "b" "b" 2 a c))
-;(reduce-avl #(str %1 (second %2)) 0 a :left)
-;(reduce-avl #(str %1 (second %2)) 0 a :right)
+;(reduce-avl #(str %1 (second %2)) "-" b :left)
+;(reduce-avl #(str %1 (second %2)) "-" b :right)
+
+
+;merge number
+;(def c (AVLTreeVertex. 2 2 1 nil nil))
+;(def a (AVLTreeVertex. 3 3 1 nil nil))
+;(def b (AVLTreeVertex. -1 4 2 a c))
+;
+;(def f (AVLTreeVertex. 1 1 1 nil nil))
+;(def e (AVLTreeVertex. -1 -1 1 nil nil))
+;(def d (AVLTreeVertex. 0 0 2 e f))
+;merge str
+;(def c (AVLTreeVertex. 2 "c" 1 nil nil))
+;(def a (AVLTreeVertex. 3 "a" 1 nil nil))
+;(def b (AVLTreeVertex. -1 "b" 2 a c))
+;
+;(def f (AVLTreeVertex. 1 "f" 1 nil nil))
+;(def e (AVLTreeVertex. -1 "e" 1 nil nil))
+;(def d (AVLTreeVertex. 0 "d" 2 e f))
