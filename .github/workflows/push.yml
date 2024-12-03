@@ -26,6 +26,9 @@ jobs:
           cljfmt: latest
 
       - name: Check format
+        run: cljfmt fix
+
+      - name: Check format
         run: cljfmt check
 
       - name: Lint
