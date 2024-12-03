@@ -133,7 +133,8 @@
           (let [nr (:right node)
                 min-node (search-min-node nr)
                 new-root (assoc node :key (:key min-node) :value (:value min-node))]
-            (balance (assoc new-root :right (delete nr (:key min-node))))))))))
+            (balance (assoc new-root :right (delete nr (:key min-node))))))))
+    node))
 
 (defn map-avl [f node]
   (when node
@@ -147,7 +148,7 @@
     (let [l (filter-avl f (:left node))
           r (filter-avl f (:right node))
           entry [(:key node) (:value node)]
-          new-value (if (f entry) [entry])]
+          new-value (if (f entry) [entry] [])]
       (into () (concat l new-value r)))))
 
 (defn- opposite [side] (if (= side :left) :right :left))
