@@ -48,15 +48,6 @@
             (avl-balanced? (get-tree dict)))))))
 
 (deftest test-balance-after-insert
-  (testing "Test that tree balance after deleting insert"
-    (is (check/quick-check
-          100
-          (prop/for-all [dict gen-dict
-                         keys (gen-numbers 20)
-                         values (gen-numbers 20)]
-            (avl-balanced? (get-tree (add dict keys values))))))))
-
-(deftest test-balance-after-insert
   (testing "Test that tree balance after inserting keys and values"
     (is (check/quick-check
           100
