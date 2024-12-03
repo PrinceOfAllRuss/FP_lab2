@@ -31,6 +31,9 @@ jobs:
       - name: Check format
         run: cljfmt check
 
+      - name: Lint format
+        run: clj-kondo --fix
+
       - name: Lint
         run: clj-kondo --lint src
 

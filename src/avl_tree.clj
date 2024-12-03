@@ -208,15 +208,3 @@
       (if (> i (- length 1))
         new-tree
         (recur (inc i) (merge-insert new-tree (create-node (nth keys i) (nth values i))))))))
-
-(defn- visualize [node]
-  (letfn [(build-tree [node prefix is-left]
-            (when node
-              (str
-                (build-tree (:right node) (str prefix (if is-left "│   " "    ")) false)
-                prefix
-                (if is-left "└── " "┌── ")
-                (str (:key node) ":" (:value node) " (h:" (:height node) ")")
-                "\n"
-                (build-tree (:left node) (str prefix (if is-left "    " "│   ")) true))))]
-    (println (build-tree node "" false))))
